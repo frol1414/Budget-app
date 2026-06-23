@@ -1,172 +1,10 @@
 import 'package:flutter/material.dart';
-import '../models/category.dart';
+import 'package:provider/provider.dart';
 import '../models/transaction.dart';
+import '../providers/finance_provider.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
-
-  // Mock list of 20 transactions
-  static final List<Transaction> mockTransactions = [
-    // June 23, 2026
-    Transaction(
-      id: '1',
-      category: Category.getById('food'),
-      type: TransactionType.expense,
-      amount: 15.40,
-      date: DateTime(2026, 6, 23, 14, 30),
-    ),
-    Transaction(
-      id: '2',
-      category: Category.getById('transport'),
-      type: TransactionType.expense,
-      amount: 4.50,
-      date: DateTime(2026, 6, 23, 10, 15),
-    ),
-    Transaction(
-      id: '3',
-      category: Category.getById('salary'),
-      type: TransactionType.income,
-      amount: 2500.00,
-      date: DateTime(2026, 6, 23, 9, 00),
-    ),
-    
-    // June 22, 2026
-    Transaction(
-      id: '4',
-      category: Category.getById('entertainment'),
-      type: TransactionType.expense,
-      amount: 25.00,
-      date: DateTime(2026, 6, 22, 19, 45),
-    ),
-    Transaction(
-      id: '5',
-      category: Category.getById('food'),
-      type: TransactionType.expense,
-      amount: 42.10,
-      date: DateTime(2026, 6, 22, 13, 00),
-    ),
-    Transaction(
-      id: '6',
-      category: Category.getById('freelance'),
-      type: TransactionType.income,
-      amount: 150.00,
-      date: DateTime(2026, 6, 22, 11, 20),
-    ),
-    
-    // June 21, 2026
-    Transaction(
-      id: '7',
-      category: Category.getById('utilities'),
-      type: TransactionType.expense,
-      amount: 85.50,
-      date: DateTime(2026, 6, 21, 15, 30),
-    ),
-    Transaction(
-      id: '8',
-      category: Category.getById('shopping'),
-      type: TransactionType.expense,
-      amount: 120.00,
-      date: DateTime(2026, 6, 21, 11, 00),
-    ),
-
-    // June 20, 2026
-    Transaction(
-      id: '9',
-      category: Category.getById('food'),
-      type: TransactionType.expense,
-      amount: 8.50,
-      date: DateTime(2026, 6, 20, 18, 10),
-    ),
-    Transaction(
-      id: '10',
-      category: Category.getById('transport'),
-      type: TransactionType.expense,
-      amount: 2.75,
-      date: DateTime(2026, 6, 20, 8, 30),
-    ),
-
-    // June 19, 2026
-    Transaction(
-      id: '11',
-      category: Category.getById('investment'),
-      type: TransactionType.income,
-      amount: 50.00,
-      date: DateTime(2026, 6, 19, 14, 00),
-    ),
-    Transaction(
-      id: '12',
-      category: Category.getById('entertainment'),
-      type: TransactionType.expense,
-      amount: 15.00,
-      date: DateTime(2026, 6, 19, 20, 00),
-    ),
-
-    // June 18, 2026
-    Transaction(
-      id: '13',
-      category: Category.getById('food'),
-      type: TransactionType.expense,
-      amount: 34.20,
-      date: DateTime(2026, 6, 18, 12, 45),
-    ),
-    Transaction(
-      id: '14',
-      category: Category.getById('transport'),
-      type: TransactionType.expense,
-      amount: 5.50,
-      date: DateTime(2026, 6, 18, 9, 15),
-    ),
-
-    // June 17, 2026
-    Transaction(
-      id: '15',
-      category: Category.getById('shopping'),
-      type: TransactionType.expense,
-      amount: 45.00,
-      date: DateTime(2026, 6, 17, 16, 20),
-    ),
-
-    // June 16, 2026
-    Transaction(
-      id: '16',
-      category: Category.getById('freelance'),
-      type: TransactionType.income,
-      amount: 300.00,
-      date: DateTime(2026, 6, 16, 10, 00),
-    ),
-    Transaction(
-      id: '17',
-      category: Category.getById('food'),
-      type: TransactionType.expense,
-      amount: 12.90,
-      date: DateTime(2026, 6, 16, 19, 30),
-    ),
-
-    // June 15, 2026
-    Transaction(
-      id: '18',
-      category: Category.getById('utilities'),
-      type: TransactionType.expense,
-      amount: 60.00,
-      date: DateTime(2026, 6, 15, 14, 00),
-    ),
-
-    // June 14, 2026
-    Transaction(
-      id: '19',
-      category: Category.getById('entertainment'),
-      type: TransactionType.expense,
-      amount: 9.99,
-      date: DateTime(2026, 6, 14, 21, 15),
-    ),
-    Transaction(
-      id: '20',
-      category: Category.getById('food'),
-      type: TransactionType.expense,
-      amount: 22.40,
-      date: DateTime(2026, 6, 14, 13, 10),
-    ),
-  ];
 
   Map<DateTime, List<Transaction>> _groupTransactionsByDay(List<Transaction> list) {
     final Map<DateTime, List<Transaction>> groups = {};
@@ -219,143 +57,451 @@ class HomeScreen extends StatelessWidget {
     }
   }
 
-  String _formatDate(DateTime date) {
-    final day = date.day.toString().padLeft(2, '0');
-    final month = date.month.toString().padLeft(2, '0');
-    final year = date.year.toString();
-    return '$day.$month.$year';
+  String _getRussianMonthName(int month) {
+    const months = [
+      'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+      'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'
+    ];
+    return months[month - 1];
+  }
+
+  String _formatDateHeader(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final compareDate = DateTime(date.year, date.month, date.day);
+
+    if (compareDate == today) {
+      return 'Сегодня';
+    } else if (compareDate == yesterday) {
+      return 'Вчера';
+    } else {
+      final weekday = _getRussianWeekday(date);
+      final monthName = _getRussianMonthName(date.month);
+      return '$weekday, ${date.day} $monthName';
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final groupedTransactions = _groupTransactionsByDay(mockTransactions);
+    final provider = context.watch<FinanceProvider>();
+    final transactions = provider.transactions;
+
+    // Calculate overall balance metrics
+    double totalBalance = 0.0;
+    double totalIncome = 0.0;
+    double totalExpense = 0.0;
+
+    for (var tx in transactions) {
+      if (tx.type == TransactionType.income) {
+        totalBalance += tx.amount;
+        totalIncome += tx.amount;
+      } else {
+        totalBalance -= tx.amount;
+        totalExpense += tx.amount;
+      }
+    }
+
+    final groupedTransactions = _groupTransactionsByDay(transactions);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Транзакции',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-      ),
       body: SafeArea(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Top Empty Block
-            Container(
-              height: 120,
-              width: double.infinity,
-              margin: const EdgeInsets.all(16.0),
-              decoration: BoxDecoration(
-                color: Theme.of(context).cardTheme.color ?? const Color(0xFF1A1D2E),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: Colors.grey.withOpacity(0.2),
-                  width: 1,
-                ),
-              ),
-              child: const Center(
-                child: Text(
-                  'Пустой блок (баланс / аналитика)',
-                  style: TextStyle(color: Colors.grey, fontSize: 14),
-                ),
-              ),
-            ),
+            const SizedBox(height: 16), // Top spacer to compensate for removed header bar
 
-            // Section Title
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
+            // Top Balance Card (Inspired by example.webp)
+            Container(
+              height: 160,
+              width: double.infinity,
+              margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              padding: const EdgeInsets.all(24.0),
+              decoration: BoxDecoration(
+                color: const Color(0xFF202020), // Charcoal container
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 15,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
               child: Row(
                 children: [
-                  Text(
-                    'История',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                  // Left stats side
+                  Expanded(
+                    flex: 3,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'ОБЩИЙ БАЛАНС',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.5),
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          '${totalBalance >= 0 ? "" : "-"}${totalBalance.abs().toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 26,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const Spacer(),
+                        Row(
+                          children: [
+                            // Income display
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.1),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.arrow_upward_rounded,
+                                    size: 12,
+                                    color: Color(0xFF00C7BD),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Доходы',
+                                      style: TextStyle(
+                                        color: Colors.white.withOpacity(0.5),
+                                        fontSize: 9,
+                                      ),
+                                    ),
+                                    Text(
+                                      '${totalIncome.toStringAsFixed(0)}',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            const SizedBox(width: 24),
+                            // Expense display
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.1),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.arrow_downward_rounded,
+                                    size: 12,
+                                    color: Color(0xFFEDFF5C),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Расходы',
+                                      style: TextStyle(
+                                        color: Colors.white.withOpacity(0.5),
+                                        fontSize: 9,
+                                      ),
+                                    ),
+                                    Text(
+                                      '${totalExpense.toStringAsFixed(0)}',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Right decorative graph side
+                  Expanded(
+                    flex: 1,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        _buildCapsule(0.4, const Color(0xFFEDFF5C)),
+                        _buildCapsule(0.85, const Color(0xFF00C7BD)),
+                        _buildCapsule(0.6, Colors.white.withOpacity(0.3)),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
 
+            // Section Title
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24.0, vertical: 14.0),
+              child: Text(
+                'История',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF202020),
+                ),
+              ),
+            ),
+
             // Scrollable List of Transactions Grouped by Day
             Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.only(bottom: 80.0),
-                itemCount: groupedTransactions.length,
-                itemBuilder: (context, index) {
-                  final date = groupedTransactions.keys.elementAt(index);
-                  final dayTransactions = groupedTransactions[date]!;
-                  final total = _calculateDailyTotal(dayTransactions);
-
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Day Group Header
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              '${_formatDate(date)} (${_getRussianWeekday(date)})',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.grey,
-                                fontSize: 13,
-                              ),
-                            ),
-                            Text(
-                              '${total >= 0 ? "+" : ""}${total.toStringAsFixed(2)} \$',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: total >= 0 ? Colors.greenAccent : Colors.redAccent,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ],
-                        ),
+              child: provider.isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF202020)),
                       ),
-                      
-                      // Transactions for this day
-                      ...dayTransactions.map((tx) {
-                        final isIncome = tx.type == TransactionType.income;
-                        return Card(
-                          margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
-                          child: ListTile(
-                            leading: Icon(tx.category.icon, color: tx.category.color),
-                            title: Text(
-                              tx.category.name,
-                              style: const TextStyle(fontWeight: FontWeight.w600),
-                            ),
-                            trailing: Text(
-                              '${isIncome ? "+" : "-"}${tx.amount.toStringAsFixed(2)} \$',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                                color: isIncome ? Colors.greenAccent : Colors.redAccent,
+                    )
+                  : transactions.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.hourglass_empty_rounded,
+                                size: 64,
+                                color: Colors.grey.withOpacity(0.4),
                               ),
-                            ),
+                              const SizedBox(height: 12),
+                              const Text(
+                                'Нет записей о транзакциях',
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
                           ),
-                        );
-                      }),
-                      const SizedBox(height: 12),
-                    ],
-                  );
-                },
-              ),
+                        )
+                      : ListView.builder(
+                          physics: const BouncingScrollPhysics(),
+                          padding: const EdgeInsets.only(bottom: 120.0),
+                          itemCount: groupedTransactions.length,
+                          itemBuilder: (context, index) {
+                            final date = groupedTransactions.keys.elementAt(index);
+                            final dayTransactions = groupedTransactions[date]!;
+                            final total = _calculateDailyTotal(dayTransactions);
+
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Day Group Header (Aligned to horizontal offset 32 to match inner text)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 8.0),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        _formatDateHeader(date),
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.grey,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                      Text(
+                                        '${total >= 0 ? "+" : ""}${total.toStringAsFixed(2)}',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: total >= 0
+                                              ? const Color(0xFF00C7BD) // Turquoise for income
+                                              : const Color(0xFF202020), // Charcoal for expense
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                                // Transactions for this day
+                                ...dayTransactions.map((tx) {
+                                  final isIncome = tx.type == TransactionType.income;
+                                  return Container(
+                                    margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(20),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.015),
+                                          blurRadius: 10,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    child: ListTile(
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                                      leading: Container(
+                                        width: 44,
+                                        height: 44,
+                                        decoration: BoxDecoration(
+                                          color: tx.category.color.withOpacity(0.12),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(
+                                          tx.category.icon,
+                                          color: tx.category.color,
+                                          size: 20,
+                                        ),
+                                      ),
+                                      title: Text(
+                                        tx.category.name,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 14,
+                                          color: Color(0xFF202020),
+                                        ),
+                                      ),
+                                      trailing: Text(
+                                        '${isIncome ? "+" : "-"}${tx.amount.toStringAsFixed(2)}',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                          color: isIncome
+                                              ? const Color(0xFF00C7BD)
+                                              : const Color(0xFF202020),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }),
+                                const SizedBox(height: 10),
+                              ],
+                            );
+                          },
+                        ),
             ),
           ],
         ),
       ),
-      // Bottom Right FAB
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.pushNamed(context, '/add_transaction');
-        },
-        tooltip: 'Добавить транзакцию',
-        child: const Icon(Icons.add),
+      // FAB button positioned higher to float above bottom tab bar
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 96.0, right: 4.0),
+        child: SizedBox(
+          width: 58,
+          height: 58,
+          child: FloatingActionButton(
+            onPressed: () {
+              Navigator.pushNamed(context, '/add_transaction');
+            },
+            backgroundColor: const Color(0xFFEDFF5C), // Lime Yellow
+            elevation: 4,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: const Icon(
+              Icons.add_rounded,
+              color: Color(0xFF202020),
+              size: 32,
+            ),
+          ),
+        ),
+      ),
+      // Custom floating bottom navigation bar
+      bottomNavigationBar: _buildBottomNavBar(context),
+    );
+  }
+
+  // Floating Bottom Tab Bar with highlighted central "Transactions" tab
+  Widget _buildBottomNavBar(BuildContext context) {
+    return Container(
+      height: 68,
+      margin: const EdgeInsets.only(left: 24, right: 24, bottom: 24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          // Categories Tab
+          IconButton(
+            onPressed: () {
+              Navigator.pushNamed(context, '/add_transaction');
+            },
+            icon: const Icon(Icons.grid_view_rounded, color: Colors.grey, size: 22),
+          ),
+          // Highlighted Central "Transactions" Tab (Active)
+          Container(
+            width: 48,
+            height: 48,
+            decoration: const BoxDecoration(
+              color: Color(0xFF202020),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.receipt_long_rounded,
+              color: Color(0xFFEDFF5C), // Lime Yellow
+              size: 22,
+            ),
+          ),
+          // Charts/Analytics Tab (Placeholder)
+          IconButton(
+            onPressed: () {},
+            icon: const Icon(Icons.bar_chart_rounded, color: Colors.grey, size: 24),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Visual capsule builder helper
+  Widget _buildCapsule(double heightFactor, Color color) {
+    return Container(
+      width: 10,
+      height: 70,
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Stack(
+        alignment: Alignment.bottomCenter,
+        children: [
+          FractionallySizedBox(
+            heightFactor: heightFactor,
+            child: Container(
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
