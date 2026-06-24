@@ -37,7 +37,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
-        scaffoldBackgroundColor: const Color(0xFFF4F4F4), // Light gray background from example.webp
+        scaffoldBackgroundColor: Colors.white,
         colorScheme: ColorScheme.light(
           primary: const Color(0xFF202020), // Charcoal/Dark gray from Pallete.webp
           secondary: const Color(0xFFEDFF5C), // Lime Yellow from Pallete.webp

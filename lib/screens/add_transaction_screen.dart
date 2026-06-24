@@ -5,7 +5,14 @@ import '../models/transaction.dart';
 import '../providers/finance_provider.dart';
 
 class AddTransactionScreen extends StatefulWidget {
-  const AddTransactionScreen({super.key});
+  final bool isEmbedded;
+  final VoidCallback? onBack;
+
+  const AddTransactionScreen({
+    super.key,
+    this.isEmbedded = false,
+    this.onBack,
+  });
 
   @override
   State<AddTransactionScreen> createState() => _AddTransactionScreenState();
@@ -23,6 +30,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         category: category,
         transactionType: _selectedType,
         parentContext: context,
+        isEmbedded: widget.isEmbedded,
+        onBack: widget.onBack,
       ),
     );
   }
@@ -57,7 +66,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 ),
                 alignment: Alignment.center,
                 child: Text(
-                  'Расход',
+                  'Expense',
                   style: TextStyle(
                     color: _selectedType == TransactionType.expense
                         ? Colors.white
@@ -82,7 +91,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 ),
                 alignment: Alignment.center,
                 child: Text(
-                  'Доход',
+                  'Income',
                   style: TextStyle(
                     color: _selectedType == TransactionType.income
                         ? Colors.white
@@ -107,7 +116,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Категория'),
+        title: const Text('Category'),
         centerTitle: true,
         leading: Padding(
           padding: const EdgeInsets.all(8.0),
@@ -119,7 +128,13 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             ),
             child: IconButton(
               icon: const Icon(Icons.arrow_back_rounded, size: 18),
-              onPressed: () => Navigator.pop(context),
+              onPressed: () {
+                if (widget.isEmbedded) {
+                  widget.onBack?.call();
+                } else {
+                  Navigator.pop(context);
+                }
+              },
               padding: EdgeInsets.zero,
             ),
           ),
@@ -136,7 +151,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               const SizedBox(height: 20),
 
               const Text(
-                'Выберите категорию транзакции:',
+                'Select transaction category:',
                 style: TextStyle(
                   color: Colors.grey,
                   fontSize: 13,
@@ -149,6 +164,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               Expanded(
                 child: ListView.builder(
                   physics: const BouncingScrollPhysics(),
+                  padding: EdgeInsets.only(
+                    top: 6.0,
+                    bottom: widget.isEmbedded ? 120.0 : 20.0,
+                  ),
                   itemCount: categories.length,
                   itemBuilder: (context, index) {
                     final cat = categories[index];
@@ -219,12 +238,16 @@ class NumericKeypadSheet extends StatefulWidget {
   final Category category;
   final TransactionType transactionType;
   final BuildContext parentContext;
+  final bool isEmbedded;
+  final VoidCallback? onBack;
 
   const NumericKeypadSheet({
     super.key,
     required this.category,
     required this.transactionType,
     required this.parentContext,
+    this.isEmbedded = false,
+    this.onBack,
   });
 
   @override
@@ -297,9 +320,9 @@ class _NumericKeypadSheetState extends State<NumericKeypadSheet> {
     final compareDate = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
 
     if (compareDate == today) {
-      return 'Сегодня';
+      return 'Today';
     } else if (compareDate == yesterday) {
-      return 'Вчера';
+      return 'Yesterday';
     } else {
       final day = _selectedDate.day.toString().padLeft(2, '0');
       final month = _selectedDate.month.toString().padLeft(2, '0');
@@ -313,7 +336,7 @@ class _NumericKeypadSheetState extends State<NumericKeypadSheet> {
     if (amount <= 0.0) {
       ScaffoldMessenger.of(widget.parentContext).showSnackBar(
         const SnackBar(
-          content: Text('Пожалуйста, введите сумму больше 0'),
+          content: Text('Please enter an amount greater than 0'),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -342,8 +365,13 @@ class _NumericKeypadSheetState extends State<NumericKeypadSheet> {
 
     // Close bottom sheet
     Navigator.pop(context);
-    // Close AddTransactionScreen
-    Navigator.pop(widget.parentContext);
+    
+    // Close AddTransactionScreen / Return to History Tab
+    if (widget.isEmbedded) {
+      widget.onBack?.call();
+    } else {
+      Navigator.pop(widget.parentContext);
+    }
   }
 
   @override
@@ -407,7 +435,7 @@ class _NumericKeypadSheetState extends State<NumericKeypadSheet> {
                     scrollDirection: Axis.horizontal,
                     reverse: true,
                     child: Text(
-                      '$_amountStr \$',
+                      _amountStr,
                       style: const TextStyle(
                         color: Color(0xFFEDFF5C), // Lime Yellow text for amount
                         fontSize: 32,
@@ -438,7 +466,7 @@ class _NumericKeypadSheetState extends State<NumericKeypadSheet> {
                       const Icon(Icons.calendar_today_rounded, color: Colors.grey, size: 14),
                       const SizedBox(width: 8),
                       Text(
-                        'Дата: ${_formatDateDisplay()}',
+                        'Date: ${_formatDateDisplay()}',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 13,
@@ -448,7 +476,7 @@ class _NumericKeypadSheetState extends State<NumericKeypadSheet> {
                     ],
                   ),
                   const Text(
-                    'Изменить',
+                    'Change',
                     style: TextStyle(
                       color: Color(0xFF00C7BD),
                       fontSize: 13,
@@ -518,7 +546,7 @@ class _NumericKeypadSheetState extends State<NumericKeypadSheet> {
                 elevation: 0,
               ),
               child: const Text(
-                'Внести запись',
+                'Save Entry',
                 style: TextStyle(
                   color: Color(0xFF202020),
                   fontSize: 15,
