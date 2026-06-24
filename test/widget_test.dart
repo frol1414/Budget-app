@@ -6,7 +6,7 @@ import 'package:flutter_starter_app/providers/finance_provider.dart';
 import 'package:flutter_starter_app/screens/home_screen.dart';
 
 void main() {
-  testWidgets('Navigate to Categories tab and check for errors', (WidgetTester tester) async {
+  testWidgets('Navigate to Categories and Stats tabs and check for errors', (WidgetTester tester) async {
     final repository = MockTransactionRepository();
     final provider = FinanceProvider(repository);
 
@@ -21,15 +21,18 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    // Find the Categories navigation icon
+    // 1. Test Navigation to Categories
     final categoriesTab = find.byIcon(Icons.grid_view_rounded);
     expect(categoriesTab, findsOneWidget);
-
-    // Tap on Categories navigation icon
     await tester.tap(categoriesTab);
     await tester.pumpAndSettle();
-
-    // Verify CategoriesScreen is shown (it has a title text "Categories")
     expect(find.text('Categories'), findsOneWidget);
+
+    // 2. Test Navigation to Analytics/Stats
+    final statsTab = find.byIcon(Icons.bar_chart_rounded);
+    expect(statsTab, findsOneWidget);
+    await tester.tap(statsTab);
+    await tester.pumpAndSettle();
+    expect(find.text('Analytics'), findsOneWidget);
   });
 }

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../models/transaction.dart';
 import '../providers/finance_provider.dart';
 import 'categories_screen.dart';
+import 'stats_screen.dart';
 
 
 
@@ -15,12 +16,12 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late PageController _pageController;
-  int _currentPage = 0;
+  int _currentPage = 1;
 
   @override
   void initState() {
     super.initState();
-    _pageController = PageController();
+    _pageController = PageController(initialPage: 1);
   }
 
   @override
@@ -138,16 +139,19 @@ class _HomeScreenState extends State<HomeScreen> {
           });
         },
         children: [
-          // Page 0: History (HomeScreen content wrapped in Stack to enable list scroll-under)
+          // Page 0: Categories
+          const CategoriesScreen(),
+
+          // Page 1: History (HomeScreen content wrapped in Stack to enable list scroll-under)
           _buildHistoryPage(context, provider, transactions, groupedTransactions, totalBalance, totalIncome, totalExpense),
 
-          // Page 1: Categories
-          const CategoriesScreen(),
+          // Page 2: Stats
+          const StatsScreen(),
         ],
       ),
-      // FAB button floats above the persistent bottom nav bar, visible only on tab 0
+      // FAB button floats above the persistent bottom nav bar, visible only on tab 1
       floatingActionButton: AnimatedScale(
-        scale: _currentPage == 0 ? 1.0 : 0.0,
+        scale: _currentPage == 1 ? 1.0 : 0.0,
         duration: const Duration(milliseconds: 200),
         child: Padding(
           padding: const EdgeInsets.only(bottom: 12.0, right: 4.0),
@@ -561,14 +565,18 @@ class _HomeScreenState extends State<HomeScreen> {
         }
 
         // Clamp values to prevent out-of-bounds index interpolation during overscroll
-        final double categoryFactor = pageOffset.clamp(0.0, 1.0);
-        final double historyFactor = (1.0 - pageOffset).clamp(0.0, 1.0);
+        final double categoryFactor = (1.0 - pageOffset).clamp(0.0, 1.0);
+        final double historyFactor = (1.0 - (pageOffset - 1.0).abs()).clamp(0.0, 1.0);
+        final double statsFactor = (pageOffset - 1.0).clamp(0.0, 1.0);
 
         final categoryIconColor = Color.lerp(Colors.grey, const Color(0xFFEDFF5C), categoryFactor)!;
         final categoryBgColor = Color.lerp(Colors.transparent, const Color(0xFF202020), categoryFactor)!;
 
         final historyIconColor = Color.lerp(Colors.grey, const Color(0xFFEDFF5C), historyFactor)!;
         final historyBgColor = Color.lerp(Colors.transparent, const Color(0xFF202020), historyFactor)!;
+
+        final statsIconColor = Color.lerp(Colors.grey, const Color(0xFFEDFF5C), statsFactor)!;
+        final statsBgColor = Color.lerp(Colors.transparent, const Color(0xFF202020), statsFactor)!;
 
         return Container(
           color: Colors.transparent, // Ensures the scaffold's bottom navbar area has no gray background
@@ -600,7 +608,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 GestureDetector(
                   onTap: () {
                     _pageController.animateToPage(
-                      1,
+                      0,
                       duration: const Duration(milliseconds: 300),
                       curve: Curves.easeInOutCubic,
                     );
@@ -624,7 +632,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 GestureDetector(
                   onTap: () {
                     _pageController.animateToPage(
-                      0,
+                      1,
                       duration: const Duration(milliseconds: 300),
                       curve: Curves.easeInOutCubic,
                     );
@@ -644,10 +652,28 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
 
-                // Charts Tab (Placeholder)
-                IconButton(
-                  onPressed: () {},
-                  icon: const Icon(Icons.bar_chart_rounded, color: Colors.grey, size: 24),
+                // Charts Tab
+                GestureDetector(
+                  onTap: () {
+                    _pageController.animateToPage(
+                      2,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOutCubic,
+                    );
+                  },
+                  child: Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: statsBgColor,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.bar_chart_rounded,
+                      color: statsIconColor,
+                      size: 24,
+                    ),
+                  ),
                 ),
               ],
             ),
