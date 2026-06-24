@@ -110,9 +110,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final categories = _selectedType == TransactionType.expense
-        ? Category.expenseCategories
-        : Category.incomeCategories;
+    final provider = context.watch<FinanceProvider>();
+    final categories = provider.categories.where((cat) =>
+        cat.type == (_selectedType == TransactionType.expense
+            ? CategoryType.expense
+            : CategoryType.income)).toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -174,51 +176,50 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                     return GestureDetector(
                       onTap: () => _showNumericKeypad(context, cat),
                       child: Container(
-                        height: 74,
-                        margin: const EdgeInsets.symmetric(vertical: 6.0),
-                        padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                        margin: const EdgeInsets.symmetric(vertical: 4.0),
                         decoration: BoxDecoration(
-                          color: cat.color, // Full width colored block
-                          borderRadius: BorderRadius.circular(18),
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: Colors.grey.withOpacity(0.24),
+                            width: 1,
+                          ),
                           boxShadow: [
                             BoxShadow(
-                              color: cat.color.withOpacity(0.25),
-                              blurRadius: 8,
+                              color: Colors.black.withOpacity(0.06),
+                              blurRadius: 16,
                               offset: const Offset(0, 4),
                             ),
                           ],
                         ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 42,
-                              height: 42,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                cat.icon,
-                                color: Colors.white,
-                                size: 20,
-                              ),
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                          leading: Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: cat.color.withOpacity(0.12),
+                              shape: BoxShape.circle,
                             ),
-                            const SizedBox(width: 16),
-                            Text(
-                              cat.name,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
+                            child: Icon(
+                              cat.icon,
+                              color: cat.color,
+                              size: 20,
                             ),
-                            const Spacer(),
-                            const Icon(
-                              Icons.arrow_forward_ios_rounded,
-                              color: Colors.white,
-                              size: 16,
+                          ),
+                          title: Text(
+                            cat.name,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                              color: Color(0xFF202020),
                             ),
-                          ],
+                          ),
+                          trailing: const Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            color: Color(0xFF202020),
+                            size: 14,
+                          ),
                         ),
                       ),
                     );

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../models/category.dart';
 import '../models/transaction.dart';
 import '../repositories/transaction_repository.dart';
 
@@ -9,12 +10,26 @@ class FinanceProvider extends ChangeNotifier {
   bool _isLoading = true;
   StreamSubscription<List<Transaction>>? _subscription;
 
+  List<Category>? _categories;
+
   FinanceProvider(this._repository) {
     _listenToTransactions();
   }
 
   List<Transaction> get transactions => _transactions;
   bool get isLoading => _isLoading;
+  
+  List<Category> get categories {
+    _categories ??= List.from(Category.allCategories);
+    return _categories!;
+  }
+
+  void addCategory(Category category) {
+    _categories ??= List.from(Category.allCategories);
+    _categories!.add(category);
+    notifyListeners();
+  }
+
 
   void _listenToTransactions() {
     _isLoading = true;

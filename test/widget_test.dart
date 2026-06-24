@@ -1,30 +1,35 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:flutter_starter_app/main.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter_starter_app/repositories/mock_transaction_repository.dart';
+import 'package:flutter_starter_app/providers/finance_provider.dart';
+import 'package:flutter_starter_app/screens/home_screen.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('Navigate to Categories tab and check for errors', (WidgetTester tester) async {
+    final repository = MockTransactionRepository();
+    final provider = FinanceProvider(repository);
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    await tester.pumpWidget(
+      ChangeNotifierProvider<FinanceProvider>.value(
+        value: provider,
+        child: const MaterialApp(
+          home: HomeScreen(),
+        ),
+      ),
+    );
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Find the Categories navigation icon
+    final categoriesTab = find.byIcon(Icons.grid_view_rounded);
+    expect(categoriesTab, findsOneWidget);
+
+    // Tap on Categories navigation icon
+    await tester.tap(categoriesTab);
+    await tester.pumpAndSettle();
+
+    // Verify CategoriesScreen is shown (it has a title text "Categories")
+    expect(find.text('Categories'), findsOneWidget);
   });
 }
