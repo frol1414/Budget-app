@@ -196,4 +196,36 @@ class MockTransactionRepository implements TransactionRepository {
     _list.sort((a, b) => b.date.compareTo(a.date));
     _controller.add(List.unmodifiable(_list));
   }
+
+  final List<Category> _customCategories = [];
+  final StreamController<List<Category>> _categoryController = StreamController<List<Category>>.broadcast();
+
+  @override
+  Stream<List<Category>> getCustomCategories() {
+    final controller = StreamController<List<Category>>();
+    // Emit initial list.
+    controller.add(List.unmodifiable(_customCategories));
+
+    // Listen to changes and forward.
+    final subscription = _categoryController.stream.listen((updatedList) {
+      if (!controller.isClosed) {
+        controller.add(updatedList);
+      }
+    });
+
+    controller.onCancel = () {
+      subscription.cancel();
+      controller.close();
+    };
+
+    return controller.stream;
+  }
+
+  @override
+  Future<void> addCustomCategory(Category category) async {
+    if (!_customCategories.any((c) => c.id == category.id)) {
+      _customCategories.add(category);
+      _categoryController.add(List.unmodifiable(_customCategories));
+    }
+  }
 }

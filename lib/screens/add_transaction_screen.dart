@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../models/category.dart';
 import '../models/transaction.dart';
 import '../providers/finance_provider.dart';
+import '../widgets/category_tile.dart';
 
 class AddTransactionScreen extends StatefulWidget {
   final bool isEmbedded;
@@ -110,123 +111,87 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<FinanceProvider>();
-    final categories = provider.categories.where((cat) =>
-        cat.type == (_selectedType == TransactionType.expense
-            ? CategoryType.expense
-            : CategoryType.income)).toList();
+    // Watch FinanceProvider to trigger rebuild when custom categories are updated/loaded
+    context.watch<FinanceProvider>();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Category'),
-        centerTitle: true,
-        leading: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.grey.withOpacity(0.2)),
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.arrow_back_rounded, size: 18),
-              onPressed: () {
-                if (widget.isEmbedded) {
-                  widget.onBack?.call();
-                } else {
-                  Navigator.pop(context);
-                }
-              },
-              padding: EdgeInsets.zero,
+    final categories = Category.allCategories
+        .where((cat) => cat.type == (_selectedType == TransactionType.expense
+            ? CategoryType.expense
+            : CategoryType.income))
+        .toList();
+
+    return PopScope(
+      canPop: !widget.isEmbedded,
+      onPopInvoked: (didPop) {
+        if (didPop) return;
+        widget.onBack?.call();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Category'),
+          centerTitle: true,
+          leading: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.grey.withOpacity(0.2)),
+              ),
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back_rounded, size: 18),
+                onPressed: () {
+                  if (widget.isEmbedded) {
+                    widget.onBack?.call();
+                  } else {
+                    Navigator.pop(context);
+                  }
+                },
+                padding: EdgeInsets.zero,
+              ),
             ),
           ),
         ),
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 1. Selector Income/Expense
-              _buildTypeToggle(),
-              const SizedBox(height: 20),
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 1. Selector Income/Expense
+                _buildTypeToggle(),
+                const SizedBox(height: 20),
 
-              const Text(
-                'Select transaction category:',
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // 2. Categories List (Rounded color block full width)
-              Expanded(
-                child: ListView.builder(
-                  physics: const BouncingScrollPhysics(),
-                  padding: EdgeInsets.only(
-                    top: 6.0,
-                    bottom: widget.isEmbedded ? 120.0 : 20.0,
+                const Text(
+                  'Select transaction category:',
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
                   ),
-                  itemCount: categories.length,
-                  itemBuilder: (context, index) {
-                    final cat = categories[index];
-                    return GestureDetector(
-                      onTap: () => _showNumericKeypad(context, cat),
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(vertical: 4.0),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: Colors.grey.withOpacity(0.24),
-                            width: 1,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.06),
-                              blurRadius: 16,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
-                          leading: Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: cat.color.withOpacity(0.12),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              cat.icon,
-                              color: cat.color,
-                              size: 20,
-                            ),
-                          ),
-                          title: Text(
-                            cat.name,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                              color: Color(0xFF202020),
-                            ),
-                          ),
-                          trailing: const Icon(
-                            Icons.arrow_forward_ios_rounded,
-                            color: Color(0xFF202020),
-                            size: 14,
-                          ),
-                        ),
-                      ),
-                    );
-                  },
                 ),
-              ),
-            ],
+                const SizedBox(height: 12),
+
+                // 2. Categories List (using the new CategoryTile)
+                Expanded(
+                  child: ListView.builder(
+                    physics: const BouncingScrollPhysics(),
+                    padding: EdgeInsets.only(
+                      top: 6.0,
+                      bottom: widget.isEmbedded ? 120.0 : 20.0,
+                    ),
+                    itemCount: categories.length,
+                    itemBuilder: (context, index) {
+                      final cat = categories[index];
+                      return CategoryTile(
+                        category: cat,
+                        onTap: () => _showNumericKeypad(context, cat),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

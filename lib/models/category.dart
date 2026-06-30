@@ -83,9 +83,20 @@ class Category {
     ),
   ];
 
-  static const List<Category> allCategories = [
+  static final List<Category> _customCategories = [];
+
+  static List<Category> get customCategories => _customCategories;
+
+  static void addCustomCategory(Category category) {
+    if (!_customCategories.any((c) => c.id == category.id)) {
+      _customCategories.add(category);
+    }
+  }
+
+  static List<Category> get allCategories => [
     ...expenseCategories,
     ...incomeCategories,
+    ..._customCategories,
   ];
 
   static Category getById(String id) {
@@ -97,6 +108,29 @@ class Category {
         icon: Icons.payment,
         color: Colors.grey,
         type: CategoryType.expense,
+      ),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'iconCodePoint': icon.codePoint,
+      'colorValue': color.value,
+      'type': type.name,
+    };
+  }
+
+  factory Category.fromJson(Map<String, dynamic> json) {
+    return Category(
+      id: json['id'] ?? '',
+      name: json['name'] ?? '',
+      icon: IconData(json['iconCodePoint'] ?? Icons.payment.codePoint, fontFamily: 'MaterialIcons'),
+      color: Color(json['colorValue'] ?? Colors.grey.value),
+      type: CategoryType.values.firstWhere(
+        (t) => t.name == json['type'],
+        orElse: () => CategoryType.expense,
       ),
     );
   }

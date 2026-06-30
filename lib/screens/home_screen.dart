@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/transaction.dart';
 import '../providers/finance_provider.dart';
+import 'add_transaction_screen.dart';
 import 'categories_screen.dart';
-import 'stats_screen.dart';
-
-
+import 'statistics_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,12 +15,12 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late PageController _pageController;
-  int _currentPage = 1;
+  int _currentPage = 0;
 
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(initialPage: 1);
+    _pageController = PageController();
   }
 
   @override
@@ -128,56 +127,73 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final groupedTransactions = _groupTransactionsByDay(transactions);
 
-    return Scaffold(
-      extendBody: true, // Extends the body under the floating bottom navigation bar
-      body: PageView(
-        controller: _pageController,
-        physics: const NeverScrollableScrollPhysics(), // Persistent layout, tab-controlled
-        onPageChanged: (page) {
-          setState(() {
-            _currentPage = page;
-          });
-        },
-        children: [
-          // Page 0: Categories
-          const CategoriesScreen(),
+    return PopScope(
+      canPop: _currentPage == 0,
+      onPopInvoked: (didPop) {
+        if (didPop) return;
+        _pageController.jumpToPage(0);
+      },
+      child: Scaffold(
+        extendBody: true, // Extends the body under the floating bottom navigation bar
+        body: PageView(
+          controller: _pageController,
+          physics: const NeverScrollableScrollPhysics(), // Persistent layout, tab-controlled
+          onPageChanged: (page) {
+            setState(() {
+              _currentPage = page;
+            });
+          },
+          children: [
+            // Page 0: History (HomeScreen content wrapped in Stack to enable list scroll-under)
+            _buildHistoryPage(context, provider, transactions, groupedTransactions, totalBalance, totalIncome, totalExpense),
 
-          // Page 1: History (HomeScreen content wrapped in Stack to enable list scroll-under)
-          _buildHistoryPage(context, provider, transactions, groupedTransactions, totalBalance, totalIncome, totalExpense),
-
-          // Page 2: Stats
-          const StatsScreen(),
-        ],
-      ),
-      // FAB button floats above the persistent bottom nav bar, visible only on tab 1
-      floatingActionButton: AnimatedScale(
-        scale: _currentPage == 1 ? 1.0 : 0.0,
-        duration: const Duration(milliseconds: 200),
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: 12.0, right: 4.0),
-          child: SizedBox(
-            width: 58,
-            height: 58,
-            child: FloatingActionButton(
-              onPressed: () {
-                Navigator.pushNamed(context, '/add_transaction');
+            // Page 1: Categories Management (Embedded CategoriesScreen)
+            CategoriesScreen(
+              isEmbedded: true,
+              onBack: () {
+                _pageController.jumpToPage(0);
               },
-              backgroundColor: const Color(0xFFEDFF5C), // Lime Yellow
-              elevation: 4,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: const Icon(
-                Icons.add_rounded,
-                color: Color(0xFF202020),
-                size: 32,
+            ),
+
+            // Page 2: Statistics (Embedded StatisticsScreen)
+            StatisticsScreen(
+              isEmbedded: true,
+              onBack: () {
+                _pageController.jumpToPage(0);
+              },
+            ),
+          ],
+        ),
+        // FAB button floats above the persistent bottom nav bar, visible only on tab 0
+        floatingActionButton: AnimatedScale(
+          scale: _currentPage == 0 ? 1.0 : 0.0,
+          duration: const Duration(milliseconds: 200),
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 12.0, right: 4.0),
+            child: SizedBox(
+              width: 58,
+              height: 58,
+              child: FloatingActionButton(
+                onPressed: () {
+                  Navigator.pushNamed(context, '/add_transaction');
+                },
+                backgroundColor: const Color(0xFFEDFF5C), // Lime Yellow
+                elevation: 4,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: const Icon(
+                  Icons.add_rounded,
+                  color: Color(0xFF202020),
+                  size: 32,
+                ),
               ),
             ),
           ),
         ),
+        // Persistent floating bottom navigation bar
+        bottomNavigationBar: _buildBottomNavBar(context),
       ),
-      // Persistent floating bottom navigation bar
-      bottomNavigationBar: _buildBottomNavBar(context),
     );
   }
 
@@ -191,25 +207,6 @@ class _HomeScreenState extends State<HomeScreen> {
     double totalIncome,
     double totalExpense,
   ) {
-    // Calculate stats specifically for the current month
-    final now = DateTime.now();
-    final currentMonthTransactions = transactions.where((tx) =>
-        tx.date.month == now.month && tx.date.year == now.year).toList();
-
-    double monthBalance = 0.0;
-    double monthIncome = 0.0;
-    double monthExpense = 0.0;
-
-    for (var tx in currentMonthTransactions) {
-      if (tx.type == TransactionType.income) {
-        monthBalance += tx.amount;
-        monthIncome += tx.amount;
-      } else {
-        monthBalance -= tx.amount;
-        monthExpense += tx.amount;
-      }
-    }
-
     return SafeArea(
       bottom: false,
       child: Stack(
@@ -247,7 +244,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     : ListView.builder(
                         physics: const BouncingScrollPhysics(),
                         padding: const EdgeInsets.only(
-                          top: 200.0, // Height of card container (160 + top padding 16 + bottom padding 16 + 8px gap)
+                          top: 184.0, // Height of card container (160 + padding)
                           bottom: 120.0, // Bottom padding to clear nav bar
                         ),
                         itemCount: groupedTransactions.length,
@@ -294,13 +291,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(20),
                                   border: Border.all(
-                                    color: Colors.grey.withOpacity(0.24),
+                                    color: Colors.grey.withOpacity(0.15),
                                     width: 1,
                                   ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.06),
-                                      blurRadius: 16,
+                                      color: Colors.black.withOpacity(0.04),
+                                      blurRadius: 12,
                                       offset: const Offset(0, 4),
                                     ),
                                   ],
@@ -368,37 +365,33 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
           ),
 
-          // 2. Floating Header Card (With colored shadow and transparent background)
+          // 2. Floating Header Card (With colored shadow and opaque background)
           Positioned(
             top: 0,
             left: 0,
             right: 0,
             child: Container(
-              color: Colors.transparent, // Transparent background so list is visible in margins
-              padding: const EdgeInsets.only(top: 16.0, bottom: 16.0),
+              color: Colors.transparent, // Transparent background
+              padding: const EdgeInsets.only(top: 12.0, bottom: 12.0),
               child: Container(
                 height: 160,
                 width: double.infinity,
                 margin: const EdgeInsets.symmetric(horizontal: 16.0),
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
+                padding: const EdgeInsets.all(24.0),
                 decoration: BoxDecoration(
                   color: const Color(0xFF202020), // Charcoal container
                   borderRadius: BorderRadius.circular(28),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.18),
-                      blurRadius: 20,
+                      blurRadius: 15,
+                      offset: const Offset(0, 8),
                     ),
                     // Beautiful colored shadow (glow using lime-yellow secondary color)
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.15),
-                      blurRadius: 10,
-                    ),
-                    // Extra strong shadow at the bottom for a strong 3D lift effect
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
-                      blurRadius: 30,
-                      offset: const Offset(0, 10), // Strong shadow pushing up
+                      color: const Color(0xFFEDFF5C).withOpacity(0.15),
+                      blurRadius: 25,
+                      offset: const Offset(0, 12),
                     ),
                   ],
                 ),
@@ -412,17 +405,17 @@ class _HomeScreenState extends State<HomeScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            'TOTAL BALANCE IN ${_getEnglishMonthName(now.month).toUpperCase()}',
+                            'TOTAL BALANCE',
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.55),
-                              fontSize: 9,
+                              color: Colors.white.withOpacity(0.5),
+                              fontSize: 10,
                               fontWeight: FontWeight.bold,
                               letterSpacing: 1.2,
                             ),
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            '${monthBalance >= 0 ? "" : "-"}${monthBalance.abs().toStringAsFixed(2)}',
+                            '${totalBalance >= 0 ? "" : "-"}${totalBalance.abs().toStringAsFixed(2)}',
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 26,
@@ -432,39 +425,37 @@ class _HomeScreenState extends State<HomeScreen> {
                           const Spacer(),
                           Row(
                             children: [
-                            // Income display (Increased sizes)
+                            // Income display
                             Row(
                               children: [
                                 Container(
-                                  padding: const EdgeInsets.all(6),
+                                  padding: const EdgeInsets.all(4),
                                   decoration: BoxDecoration(
                                     color: Colors.white.withOpacity(0.1),
                                     shape: BoxShape.circle,
                                   ),
                                   child: const Icon(
                                     Icons.arrow_upward_rounded,
-                                    size: 14,
+                                    size: 12,
                                     color: Color(0xFF00C7BD),
                                   ),
                                 ),
-                                const SizedBox(width: 8),
+                                const SizedBox(width: 6),
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       'Income',
                                       style: TextStyle(
-                                        color: Colors.white.withOpacity(0.55),
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w500,
+                                        color: Colors.white.withOpacity(0.5),
+                                        fontSize: 9,
                                       ),
                                     ),
-                                    const SizedBox(height: 2),
                                     Text(
-                                      monthIncome.toStringAsFixed(0),
+                                      totalIncome.toStringAsFixed(0),
                                       style: const TextStyle(
                                         color: Colors.white,
-                                        fontSize: 14,
+                                        fontSize: 11,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
@@ -473,39 +464,37 @@ class _HomeScreenState extends State<HomeScreen> {
                               ],
                             ),
                             const SizedBox(width: 24),
-                            // Expense display (Increased sizes)
+                            // Expense display
                             Row(
                               children: [
                                 Container(
-                                  padding: const EdgeInsets.all(6),
+                                  padding: const EdgeInsets.all(4),
                                   decoration: BoxDecoration(
                                     color: Colors.white.withOpacity(0.1),
                                     shape: BoxShape.circle,
                                   ),
                                   child: const Icon(
                                     Icons.arrow_downward_rounded,
-                                    size: 14,
+                                    size: 12,
                                     color: Color(0xFFEDFF5C),
                                   ),
                                 ),
-                                const SizedBox(width: 8),
+                                const SizedBox(width: 6),
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       'Expenses',
                                       style: TextStyle(
-                                        color: Colors.white.withOpacity(0.55),
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w500,
+                                        color: Colors.white.withOpacity(0.5),
+                                        fontSize: 9,
                                       ),
                                     ),
-                                    const SizedBox(height: 2),
                                     Text(
-                                      monthExpense.toStringAsFixed(0),
+                                      totalExpense.toStringAsFixed(0),
                                       style: const TextStyle(
                                         color: Colors.white,
-                                        fontSize: 14,
+                                        fontSize: 11,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
@@ -537,149 +526,112 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         ),
-          // 3. Opaque mask at the very top of the SafeArea to hide items scrolling above the card's top margin
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            height: 16,
-            child: Container(
-              color: Theme.of(context).scaffoldBackgroundColor,
-            ),
+      ],
+    ),
+  );
+}
+
+  Widget _buildNavBarItem({
+    required IconData icon,
+    required bool isActive,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        customBorder: const CircleBorder(),
+        child: TweenAnimationBuilder<double>(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeInOut,
+          tween: Tween<double>(
+            begin: 0.0,
+            end: isActive ? 1.0 : 0.0,
           ),
-        ],
+          builder: (context, value, child) {
+            final bgColor = Color.lerp(
+              const Color(0x00202020),
+              const Color(0xFF202020),
+              value,
+            );
+            final iconColor = Color.lerp(
+              Colors.grey,
+              const Color(0xFFEDFF5C),
+              value,
+            );
+
+            return Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: bgColor,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                color: iconColor,
+                size: 22,
+              ),
+            );
+          },
+        ),
       ),
     );
   }
 
   // Floating Bottom Tab Bar with highlighted active tab
   Widget _buildBottomNavBar(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _pageController,
-      builder: (context, child) {
-        double pageOffset = 0.0;
-        if (_pageController.hasClients) {
-          pageOffset = _pageController.page ?? _currentPage.toDouble();
-        } else {
-          pageOffset = _currentPage.toDouble();
-        }
+    final isCategoryActive = _currentPage == 1;
+    final isHistoryActive = _currentPage == 0;
+    final isChartsActive = _currentPage == 2;
 
-        // Clamp values to prevent out-of-bounds index interpolation during overscroll
-        final double categoryFactor = (1.0 - pageOffset).clamp(0.0, 1.0);
-        final double historyFactor = (1.0 - (pageOffset - 1.0).abs()).clamp(0.0, 1.0);
-        final double statsFactor = (pageOffset - 1.0).clamp(0.0, 1.0);
-
-        final categoryIconColor = Color.lerp(Colors.grey, const Color(0xFFEDFF5C), categoryFactor)!;
-        final categoryBgColor = Color.lerp(Colors.transparent, const Color(0xFF202020), categoryFactor)!;
-
-        final historyIconColor = Color.lerp(Colors.grey, const Color(0xFFEDFF5C), historyFactor)!;
-        final historyBgColor = Color.lerp(Colors.transparent, const Color(0xFF202020), historyFactor)!;
-
-        final statsIconColor = Color.lerp(Colors.grey, const Color(0xFFEDFF5C), statsFactor)!;
-        final statsBgColor = Color.lerp(Colors.transparent, const Color(0xFF202020), statsFactor)!;
-
-        return Container(
-          color: Colors.transparent, // Ensures the scaffold's bottom navbar area has no gray background
-          padding: const EdgeInsets.only(left: 24, right: 24, bottom: 24, top: 12),
-          child: Container(
-            height: 68,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                // Soft dark shadow going up to separate from list content
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.06),
-                  blurRadius: 16,
-                  offset: const Offset(0, -4),
-                ),
-                // Soft dark shadow going down to give a 3D lift/floating effect
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.12),
-                  blurRadius: 24,
-                  offset: const Offset(0, 6),
-                ),
-              ],
+    return Container(
+      color: Colors.transparent, // Ensures the scaffold's bottom navbar area has no gray background
+      padding: const EdgeInsets.only(left: 16, right: 16, bottom: 24, top: 12),
+      child: Container(
+        height: 68,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 15,
+              offset: const Offset(0, -4), // Shadow going up to separate from list
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                // Categories Tab
-                GestureDetector(
-                  onTap: () {
-                    _pageController.animateToPage(
-                      0,
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOutCubic,
-                    );
-                  },
-                  child: Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: categoryBgColor,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.grid_view_rounded,
-                      color: categoryIconColor,
-                      size: 22,
-                    ),
-                  ),
-                ),
-
-                // Central "Transactions" Tab (Active when history list is visible)
-                GestureDetector(
-                  onTap: () {
-                    _pageController.animateToPage(
-                      1,
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOutCubic,
-                    );
-                  },
-                  child: Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: historyBgColor,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.receipt_long_rounded,
-                      color: historyIconColor,
-                      size: 22,
-                    ),
-                  ),
-                ),
-
-                // Charts Tab
-                GestureDetector(
-                  onTap: () {
-                    _pageController.animateToPage(
-                      2,
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOutCubic,
-                    );
-                  },
-                  child: Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: statsBgColor,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.bar_chart_rounded,
-                      color: statsIconColor,
-                      size: 24,
-                    ),
-                  ),
-                ),
-              ],
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
             ),
-          ),
-        );
-      },
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            // Categories Tab
+            _buildNavBarItem(
+              icon: Icons.grid_view_rounded,
+              isActive: isCategoryActive,
+              onTap: () => _pageController.jumpToPage(1),
+            ),
+
+            // Central "Transactions" Tab (Active when history list is visible)
+            _buildNavBarItem(
+              icon: Icons.receipt_long_rounded,
+              isActive: isHistoryActive,
+              onTap: () => _pageController.jumpToPage(0),
+            ),
+
+            // Charts Tab
+            _buildNavBarItem(
+              icon: Icons.bar_chart_rounded,
+              isActive: isChartsActive,
+              onTap: () => _pageController.jumpToPage(2),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
