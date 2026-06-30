@@ -29,11 +29,7 @@ class FinanceProvider extends ChangeNotifier {
     return _categories!;
   }
 
-  void addCategory(Category category) {
-    _categories ??= List.from(Category.allCategories);
-    _categories!.add(category);
-    notifyListeners();
-  }
+
 
 
   void _listenToTransactions() {
