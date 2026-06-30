@@ -19,12 +19,20 @@ This project is a starting point for a Flutter application.
    ```bash
    flutter run
    ```
-3. Сборка
+3. Сборка (APK и App Bundle)
+   Поскольку в приложении используются динамические категории с настраиваемыми иконками, сборку релизного релиза необходимо выполнять с флагом `--no-tree-shake-icons`:
+
+   Для сборки APK:
    ```bash
-   flutter build appbundle --release
+   flutter build apk --release --no-tree-shake-icons
    ```
 
-Путь где будет находиться готовый apk - `"build/app/outputs/flutter-apk/app-release.apk"`
+   Для сборки App Bundle (для Google Play):
+   ```bash
+   flutter build appbundle --release --no-tree-shake-icons
+   ```
+
+Путь, где будет находиться готовый apk - `"build/app/outputs/flutter-apk/app-release.apk"`
 
 > [!NOTE]
 > Перед запуском убедитесь, что у вас запущен эмулятор/симулятор или подключено реальное устройство. Список доступных устройств можно посмотреть с помощью команды `flutter devices`.
